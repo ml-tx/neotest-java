@@ -14,12 +14,13 @@ local function get_client(bufnr)
 	return client_future:wait()
 end
 
---- @param dir string
---- @return string | nil
+--- @param dir? string
+--- @return string
 local function find_any_java_file(dir)
+	local search_dir = dir or "."
 	return assert(
-		vim.iter(nio.fn.globpath(dir or ".", "**/*.java", false, true)):next(),
-		"No Java file found in the current directory."
+		vim.iter(nio.fn.globpath(search_dir, "**/*.java", false, true)):next(),
+		"No Java file found in directory: " .. search_dir
 	)
 end
 
@@ -40,7 +41,7 @@ local jdtls_compiler = {
 		local client = get_client()
 		local bufnr
 		if not client then
-			local any_java_file = assert(find_any_java_file(args.cwd), "No Java file found in the current directory.")
+			local any_java_file = find_any_java_file(args.cwd)
 			bufnr = preload_file_for_lsp(any_java_file)
 
 			assert(
@@ -74,7 +75,7 @@ local jdtls_compiler = {
 			search_pattern = "test/resources$",
 		})
 
-		return _jdtls.get_classpath_file_argument(args.classpath_file_dir, resources)
+		return _jdtls.get_classpath_file_argument(args.classpath_file_dir, resources, args.cwd)
 	end,
 }
 
