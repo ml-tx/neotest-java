@@ -6,11 +6,12 @@ local logger = require("neotest-java.logger")
 local M = {}
 
 --- @param dir? string
---- @return string | nil
+--- @return string
 local function find_any_java_file(dir)
+	local search_dir = dir or "."
 	return assert(
-		vim.iter(nio.fn.globpath(dir or ".", "**/*.java", false, true)):next(),
-		"No Java file found in the current directory."
+		vim.iter(nio.fn.globpath(search_dir, "**/*.java", false, true)):next(),
+		"No Java file found in directory: " .. search_dir
 	)
 end
 
@@ -24,8 +25,8 @@ local function preload_file_for_lsp(path)
 	return buf
 end
 
-M.get_java_home = function()
-	local any_java_file = assert(find_any_java_file(), "No Java file found in the current directory.")
+M.get_java_home = function(module_dir)
+	local any_java_file = find_any_java_file(module_dir)
 	local bufnr = preload_file_for_lsp(any_java_file)
 	local uri = vim.uri_from_bufnr(bufnr)
 	local future = nio.control.future()
@@ -46,12 +47,13 @@ M.get_java_home = function()
 end
 
 ---@param additional_classpath_entries string[]
-M.get_classpath = function(additional_classpath_entries)
+---@param module_dir string | nil
+M.get_classpath = function(additional_classpath_entries, module_dir)
 	additional_classpath_entries = additional_classpath_entries or {}
 
 	local classpaths = {}
 
-	local any_java_file = assert(find_any_java_file(), "No Java file found in the current directory.")
+	local any_java_file = find_any_java_file(module_dir)
 	local bufnr = preload_file_for_lsp(any_java_file)
 	local uri = vim.uri_from_bufnr(bufnr)
 	local runtime_classpath_future = nio.control.future()
@@ -103,8 +105,8 @@ M.get_classpath = function(additional_classpath_entries)
 	return classpaths
 end
 
-M.get_classpath_file_argument = function(report_dir, additional_classpath_entries)
-	local classpath = table.concat(M.get_classpath(additional_classpath_entries), ":")
+M.get_classpath_file_argument = function(report_dir, additional_classpath_entries, module_dir)
+	local classpath = table.concat(M.get_classpath(additional_classpath_entries, module_dir), ":")
 	local temp_file = compatible_path(report_dir .. "/.cp")
 	write_file(temp_file, ("-cp %s"):format(classpath))
 
